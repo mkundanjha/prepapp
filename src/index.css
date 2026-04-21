@@ -1,0 +1,296 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root,
+:root[data-theme='light'] {
+  color-scheme: light;
+  --accent: 91 84 232;
+  --accent-light: 124 118 238;
+  --accent-pale: 238 237 255;
+  --surface: 255 255 255;
+  --surface-2: 247 247 251;
+  --surface-3: 240 240 248;
+  --surface-4: 232 232 244;
+  --ink: 26 26 46;
+  --ink-2: 74 74 106;
+  --ink-3: 136 136 168;
+  --border-soft: 91 84 232 / 0.10;
+  --border-strong: 91 84 232 / 0.20;
+  --border-soft-color: rgba(91, 84, 232, 0.10);
+  --border-strong-color: rgba(91, 84, 232, 0.20);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --accent: 145 140 255;
+  --accent-light: 173 168 255;
+  --accent-pale: 45 43 78;
+  --surface: 20 22 34;
+  --surface-2: 11 13 22;
+  --surface-3: 29 32 48;
+  --surface-4: 42 46 67;
+  --ink: 239 242 255;
+  --ink-2: 191 198 224;
+  --ink-3: 141 149 178;
+  --border-soft: 145 140 255 / 0.16;
+  --border-strong: 145 140 255 / 0.28;
+  --border-soft-color: rgba(145, 140, 255, 0.16);
+  --border-strong-color: rgba(145, 140, 255, 0.28);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --accent: 145 140 255;
+    --accent-light: 173 168 255;
+    --accent-pale: 45 43 78;
+    --surface: 20 22 34;
+    --surface-2: 11 13 22;
+    --surface-3: 29 32 48;
+    --surface-4: 42 46 67;
+    --ink: 239 242 255;
+    --ink-2: 191 198 224;
+    --ink-3: 141 149 178;
+    --border-soft: 145 140 255 / 0.16;
+    --border-strong: 145 140 255 / 0.28;
+    --border-soft-color: rgba(145, 140, 255, 0.16);
+    --border-strong-color: rgba(145, 140, 255, 0.28);
+  }
+}
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    overflow: hidden;
+    background: rgb(var(--surface-2));
+    color: rgb(var(--ink));
+    font-family: 'Inter', sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Hide scrollbar but keep scrolling */
+  .scrollable {
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  .scrollable::-webkit-scrollbar { display: none; }
+
+  /* Bottom padding clears the mobile fixed nav; on desktop there's no bottom nav */
+  .mobile-nav-pad {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 16px);
+  }
+  @media (min-width: 768px) {
+    .mobile-nav-pad { padding-bottom: 2rem; }
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface border rounded-xl p-4 mb-3;
+    border-color: var(--border-soft-color);
+  }
+
+  .card-title {
+    @apply text-[10px] font-semibold text-ink-3 uppercase tracking-widest mb-3 font-mono;
+  }
+
+  .badge {
+    @apply text-[10px] px-2 py-0.5 rounded-full font-semibold font-mono flex-shrink-0;
+  }
+
+  .badge-done    { @apply bg-green-50 text-green-700; }
+  .badge-current { @apply bg-accent-pale text-accent; }
+  .badge-upcoming{ @apply bg-surface-3 text-ink-3; }
+  .badge-easy    { @apply bg-green-50 text-green-700; }
+  .badge-med     { @apply bg-amber-50 text-amber-700; }
+  .badge-hard    { @apply bg-red-50 text-red-700; }
+
+  .btn-primary {
+    @apply bg-accent text-white font-semibold font-mono rounded-lg px-6 py-2.5 text-sm
+           transition-opacity active:opacity-80 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply bg-surface-3 text-ink-2 font-mono rounded-lg px-5 py-2.5 text-sm border
+           transition-opacity active:opacity-70;
+    border-color: var(--border-soft-color);
+  }
+
+  .btn-warn {
+    @apply bg-amber-50 text-amber-700 font-mono rounded-lg px-5 py-2.5 text-sm
+           border border-amber-200 transition-opacity active:opacity-70;
+  }
+
+  .btn-success {
+    @apply bg-teal-50 text-teal-700 font-mono rounded-lg px-5 py-2.5 text-sm
+           border border-teal-200 transition-opacity active:opacity-70;
+  }
+
+  .pill-lc {
+    @apply text-[11px] px-2 py-0.5 rounded-md bg-blue-50 text-blue-700
+           border border-blue-200 font-mono font-semibold no-underline
+           active:opacity-70;
+  }
+
+  .pill-yt {
+    @apply text-[11px] px-2 py-0.5 rounded-md bg-red-50 text-red-700
+           border border-red-200 font-mono font-semibold no-underline
+           active:opacity-70;
+  }
+
+  .coll-header {
+    @apply flex items-center justify-between cursor-pointer px-3.5 py-3
+           bg-surface border rounded-xl mb-1.5
+           select-none active:bg-surface-3 transition-colors;
+    border-color: var(--border-soft-color);
+  }
+
+  .coll-header.open {
+    @apply rounded-b-none border-b-transparent mb-0;
+  }
+
+  .coll-body {
+    @apply border border-t-0 rounded-b-xl
+           overflow-hidden bg-surface mb-2.5;
+    border-color: var(--border-soft-color);
+  }
+
+  .toggle {
+    @apply relative inline-flex w-11 h-6 rounded-full transition-colors
+           cursor-pointer border-none flex-shrink-0;
+  }
+
+  .toggle::after {
+    content: '';
+    @apply absolute top-[3px] left-[3px] w-[18px] h-[18px] bg-surface rounded-full
+           transition-transform pointer-events-none;
+  }
+
+  .toggle.on { @apply bg-accent; }
+  .toggle.on::after { transform: translateX(18px); }
+  .toggle.off { @apply bg-surface-4; }
+
+  .day-pill {
+    @apply text-[11px] px-2.5 py-0.5 rounded-full border border-[rgba(91,84,232,0.10)]
+           cursor-pointer bg-surface-3 text-ink-3 font-mono transition-colors;
+  }
+
+  .day-pill.active {
+    @apply bg-accent-pale border-[rgba(91,84,232,0.20)] text-accent;
+  }
+
+  .check-btn {
+    @apply w-7 h-7 rounded-full border-2 border-[rgba(91,84,232,0.20)] bg-transparent
+           flex items-center justify-center text-ink-3 text-sm transition-all
+           cursor-pointer active:scale-95;
+  }
+
+  .check-btn.checked {
+    @apply bg-green-50 border-green-400 text-green-600;
+  }
+
+  .quiz-tag-dsa {
+    @apply bg-accent-pale text-accent;
+  }
+
+  .quiz-tag-sd {
+    background: rgba(20, 184, 166, 0.14);
+    color: rgb(15 118 110);
+  }
+
+  .quiz-tag-go {
+    background: rgba(245, 158, 11, 0.14);
+    color: rgb(180 83 9);
+  }
+
+  .quiz-level-junior {
+    background: rgba(16, 185, 129, 0.14);
+    color: rgb(4 120 87);
+  }
+
+  .quiz-level-mid {
+    @apply bg-surface-3 text-ink-3;
+  }
+
+  .quiz-level-senior {
+    background: rgba(var(--ink) / 0.12);
+    color: rgb(var(--ink));
+  }
+
+  .quiz-option {
+    @apply border bg-surface-3 text-ink-2;
+    border-color: var(--border-soft-color);
+  }
+
+  .quiz-option-correct {
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.34);
+    color: rgb(21 128 61);
+  }
+
+  .quiz-option-wrong {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.30);
+    color: rgb(185 28 28);
+  }
+
+  .quiz-feedback-correct {
+    color: rgb(21 128 61);
+  }
+
+  .quiz-feedback-wrong {
+    color: rgb(185 28 28);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .quiz-tag-sd,
+  :root[data-theme='dark'] .quiz-tag-sd {
+    background: rgba(45, 212, 191, 0.16);
+    color: rgb(153 246 228);
+  }
+
+  :root:not([data-theme='light']) .quiz-tag-go,
+  :root[data-theme='dark'] .quiz-tag-go {
+    background: rgba(251, 191, 36, 0.16);
+    color: rgb(253 224 71);
+  }
+
+  :root:not([data-theme='light']) .quiz-level-junior,
+  :root[data-theme='dark'] .quiz-level-junior {
+    background: rgba(16, 185, 129, 0.16);
+    color: rgb(167 243 208);
+  }
+
+  :root:not([data-theme='light']) .quiz-option-correct,
+  :root[data-theme='dark'] .quiz-option-correct {
+    background: rgba(34, 197, 94, 0.16);
+    border-color: rgba(74, 222, 128, 0.24);
+    color: rgb(187 247 208);
+  }
+
+  :root:not([data-theme='light']) .quiz-option-wrong,
+  :root[data-theme='dark'] .quiz-option-wrong {
+    background: rgba(239, 68, 68, 0.14);
+    border-color: rgba(248, 113, 113, 0.24);
+    color: rgb(254 202 202);
+  }
+
+  :root:not([data-theme='light']) .quiz-feedback-correct,
+  :root[data-theme='dark'] .quiz-feedback-correct {
+    color: rgb(187 247 208);
+  }
+
+  :root:not([data-theme='light']) .quiz-feedback-wrong,
+  :root[data-theme='dark'] .quiz-feedback-wrong {
+    color: rgb(254 202 202);
+  }
+}
