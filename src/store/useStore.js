@@ -60,7 +60,10 @@ export const useStore = create(
       // ── Quiz history ──
       quizLevel: 'mixed',
       setQuizLevel: (level) => set({ quizLevel: level }),
+      quizCategory: 'all',
+      setQuizCategory: (cat) => set({ quizCategory: cat }),
       quizHistory: [],
+      setQuizHistory: (history) => set({ quizHistory: history }),
       addQuizResult: (score, total) =>
         set((s) => ({
           quizHistory: [{ date: today(), score, total }, ...s.quizHistory].slice(0, 30),
@@ -79,6 +82,7 @@ export const useStore = create(
         reminders: s.reminders,
         sessionLog: s.sessionLog,
         quizLevel: s.quizLevel,
+        quizCategory: s.quizCategory,
         quizHistory: s.quizHistory,
       }),
     }

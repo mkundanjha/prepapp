@@ -1,5 +1,18 @@
 import { useStore } from '../store/useStore'
 
+function calcStreak(history) {
+  if (!history.length) return 0
+  let streak = 0
+  const d = new Date()
+  for (let i = 0; i < 30; i++) {
+    const dateStr = new Date(d.getFullYear(), d.getMonth(), d.getDate() - i)
+      .toISOString().split('T')[0]
+    if (history.some(h => h.date === dateStr)) streak++
+    else break
+  }
+  return streak
+}
+
 const SLOTS = [
   {
     color: 'bg-accent',
@@ -31,18 +44,27 @@ const SLOTS = [
 const WEEK_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 
 export default function Today() {
-  const { checks, toggleCheck, startDate, targetDate } = useStore()
+  const { checks, toggleCheck, targetDate, quizHistory } = useStore()
   const done = checks.filter(Boolean).length
   const pct = Math.round((done / 3) * 100)
   const daysLeft = Math.max(0, Math.round((new Date(targetDate) - new Date()) / 86400000))
+  const streak = calcStreak(quizHistory)
+
+  const todayStr = new Date().toISOString().split('T')[0]
+  const yestStr = new Date(Date.now() - 86400000).toISOString().split('T')[0]
+  const twoDayStr = new Date(Date.now() - 2 * 86400000).toISOString().split('T')[0]
+
+  const todayQuiz = quizHistory.find(h => h.date === todayStr)
+  const yestQuiz = quizHistory.find(h => h.date === yestStr)
+  const twoDayQuiz = quizHistory.find(h => h.date === twoDayStr)
 
   return (
     <div className="pb-4">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2 mb-3">
         {[
-          { val: 3, lbl: 'streak' },
-          { val: 12, lbl: 'problems' },
+          { val: streak, lbl: 'streak 🔥' },
+          { val: quizHistory.length, lbl: 'quizzes' },
           { val: daysLeft, lbl: 'days left' },
         ].map(({ val, lbl }) => (
           <div key={lbl} className="bg-surface-3 rounded-xl p-3 text-center">
@@ -50,6 +72,30 @@ export default function Today() {
             <div className="text-[10px] text-ink-3 font-mono mt-0.5">{lbl}</div>
           </div>
         ))}
+      </div>
+
+      {/* Quiz progress */}
+      <div className="card mb-3">
+        <div className="card-title">Quiz progress</div>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { lbl: 'Today', result: todayQuiz },
+            { lbl: 'Yesterday', result: yestQuiz },
+            { lbl: '2 days ago', result: twoDayQuiz },
+          ].map(({ lbl, result }) => (
+            <div key={lbl} className="bg-surface-3 rounded-xl p-3 text-center">
+              <div className={`text-xl font-bold font-mono ${result ? 'text-accent' : 'text-ink-3'}`}>
+                {result ? `${result.score}/${result.total}` : '—'}
+              </div>
+              <div className="text-[10px] text-ink-3 font-mono mt-0.5">{lbl}</div>
+              {result && (
+                <div className="text-[10px] text-ink-3 mt-0.5">
+                  {Math.round((result.score / result.total) * 100)}%
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* Today's sessions */}

@@ -1,6 +1,11 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { QUESTION_BANK } from '../data/questions'
 import { useStore } from '../store/useStore'
+import { supabase } from '../lib/supabase'
+import { saveQuizResult } from '../lib/db'
+import Leaderboard from './Leaderboard'
+import Avatar from './Avatar'
+import { getLeaderboard } from '../lib/db'
 
 function shuffle(arr) {
   const r = [...arr]
@@ -21,7 +26,10 @@ function pick(cat, count, level) {
   return shuffle(getPool(cat, level)).slice(0, count)
 }
 
-function buildSet(level) {
+function buildSet(level, category) {
+  if (category === 'dsa') return shuffle(pick('dsa', 5, level))
+  if (category === 'sd')  return shuffle(pick('sd',  5, level))
+  if (category === 'go')  return shuffle(pick('go',  5, level))
   const dsa = pick('dsa', 1, level)
   const sd  = pick('sd', 2, level)
   const go  = pick('go', 2, level)
@@ -40,11 +48,17 @@ const LEVEL_TAG = {
   senior: { label: 'Senior', cls: 'quiz-level-senior' },
 }
 
-const LEVEL_OPTIONS = ['junior', 'mid', 'senior', 'mixed']
+const CAT_OPTIONS = [
+  { id: 'all', label: 'All' },
+  { id: 'dsa', label: 'DSA' },
+  { id: 'sd',  label: 'SysDesign' },
+  { id: 'go',  label: 'Go' },
+]
 
 export default function Quiz() {
-  const { quizHistory, addQuizResult, quizLevel, setQuizLevel } = useStore()
-  const [questions, setQuestions] = useState(() => buildSet(quizLevel))
+  const { quizHistory, addQuizResult, quizLevel, quizCategory, setQuizCategory } = useStore()
+  const [view, setView] = useState('quiz')
+  const [questions, setQuestions] = useState(() => buildSet(quizLevel, quizCategory))
   const [idx, setIdx]             = useState(0)
   const [selected, setSelected]   = useState(null)
   const [score, setScore]         = useState(0)
@@ -53,12 +67,12 @@ export default function Quiz() {
   const q = questions[idx]
 
   useEffect(() => {
-    setQuestions(buildSet(quizLevel))
+    setQuestions(buildSet(quizLevel, quizCategory))
     setIdx(0)
     setSelected(null)
     setScore(0)
     setDone(false)
-  }, [quizLevel])
+  }, [quizLevel, quizCategory])
 
   const handleAnswer = useCallback((i) => {
     if (selected !== null) return
@@ -66,12 +80,14 @@ export default function Quiz() {
     if (i === q.ans) setScore(s => s + 1)
   }, [selected, q])
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (idx + 1 >= questions.length) {
       const finalScore = score + (selected === q.ans ? 1 : 0)
       addQuizResult(finalScore, questions.length)
       setScore(finalScore)
       setDone(true)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) saveQuizResult(user.id, finalScore, questions.length)
     } else {
       setIdx(i => i + 1)
       setSelected(null)
@@ -79,7 +95,7 @@ export default function Quiz() {
   }
 
   const restart = () => {
-    setQuestions(buildSet(quizLevel))
+    setQuestions(buildSet(quizLevel, quizCategory))
     setIdx(0)
     setSelected(null)
     setScore(0)
@@ -100,11 +116,37 @@ export default function Quiz() {
     return h.date === d.toISOString().split('T')[0]
   }).length
 
+  const TabToggle = () => (
+    <div className="flex gap-1 p-1 bg-surface-3 rounded-xl mb-3">
+      {['quiz', 'leaderboard'].map(v => (
+        <button
+          key={v}
+          onClick={() => setView(v)}
+          className={`flex-1 py-1.5 rounded-lg text-xs font-semibold font-mono transition-colors ${
+            view === v ? 'bg-surface text-accent shadow-sm' : 'text-ink-3'
+          }`}
+        >
+          {v === 'quiz' ? '⚡ Quiz' : '🏆 Board'}
+        </button>
+      ))}
+    </div>
+  )
+
+  if (view === 'leaderboard') {
+    return (
+      <div className="pb-4">
+        <TabToggle />
+        <Leaderboard />
+      </div>
+    )
+  }
+
   if (done) {
     const pct = Math.round((score / questions.length) * 100)
     const msg = pct === 100 ? 'Perfect. Solid fundamentals.' : pct >= 80 ? 'Great — one slip. Keep it daily.' : pct >= 60 ? 'Decent — review the misses.' : "A few gaps. That's what this is for."
     return (
       <div className="pb-4">
+        <TabToggle />
         <div className="card text-center py-6">
           <div className="text-6xl font-bold font-mono text-accent mb-1">{score}/{questions.length}</div>
           <div className="text-sm text-ink-3 font-mono mb-4">{pct}% correct</div>
@@ -128,26 +170,29 @@ export default function Quiz() {
 
   return (
     <div className="pb-4">
+      <TabToggle />
       <div className="card">
         <div className="mb-4">
-          <div className="card-title mb-2">Experience Level</div>
+          <div className="flex items-center justify-between mb-2">
+            <div className="card-title mb-0">Category</div>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold font-mono ${LEVEL_TAG[quizLevel] ? LEVEL_TAG[quizLevel].cls : 'bg-surface-3 text-ink-3'}`}>
+              {quizLevel}
+            </span>
+          </div>
           <div className="grid grid-cols-4 gap-2">
-            {LEVEL_OPTIONS.map(level => {
-              const active = quizLevel === level
-              return (
-                <button
-                  key={level}
-                  onClick={() => setQuizLevel(level)}
-                  className={`rounded-lg px-2.5 py-2 text-[11px] font-semibold font-mono border transition-colors ${
-                    active
-                      ? 'bg-accent-pale text-accent border-[rgba(91,84,232,0.20)]'
-                      : 'bg-surface-3 text-ink-3 border-[rgba(91,84,232,0.10)]'
-                  }`}
-                >
-                  {level}
-                </button>
-              )
-            })}
+            {CAT_OPTIONS.map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setQuizCategory(id)}
+                className={`rounded-lg px-2.5 py-2 text-[11px] font-semibold font-mono border transition-colors ${
+                  quizCategory === id
+                    ? 'bg-accent-pale text-accent border-[rgba(91,84,232,0.20)]'
+                    : 'bg-surface-3 text-ink-3 border-[rgba(91,84,232,0.10)]'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -215,27 +260,63 @@ export default function Quiz() {
         )}
       </div>
 
+      <TopThree />
       <QuizHistory todayResult={todayResult} yesterday={yesterday} streak={streak} />
     </div>
   )
 }
 
-function QuizHistory({ todayResult, yesterday, streak }) {
+const MEDALS = ['🥇', '🥈', '🥉']
+
+function TopThree() {
+  const [top, setTop] = useState([])
+
+  useEffect(() => {
+    getLeaderboard().then(data => setTop(data.slice(0, 3)))
+  }, [])
+
+  if (!top.length) return null
+
   return (
-    <div className="card">
-      <div className="card-title">History</div>
-      <HistRow label="Today" value={todayResult ? `${todayResult.score}/${todayResult.total}` : 'not attempted'} />
-      <HistRow label="Yesterday" value={yesterday ? `${yesterday.score}/${yesterday.total}` : '—'} />
-      <HistRow label="Quiz streak" value={`${streak} day${streak !== 1 ? 's' : ''} 🔥`} accent />
+    <div className="card py-2.5">
+      <div className="flex items-center gap-4">
+        <span className="text-[10px] text-ink-3 font-mono flex-shrink-0">Top 3</span>
+        <div className="flex items-center gap-4">
+          {top.map((row, i) => (
+            <div key={row.user_id} className="flex items-center gap-1.5">
+              <span className="text-sm">{MEDALS[i]}</span>
+              <Avatar src={row.avatar_url} name={row.full_name} size="sm" />
+              <div>
+                <div className="text-[11px] font-medium text-ink">
+                  {row.full_name?.split(' ')[0] || 'Anon'}
+                </div>
+                <div className="text-[9px] text-ink-3 font-mono">{row.score}pts</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
 
-function HistRow({ label, value, accent }) {
+function QuizHistory({ todayResult, yesterday, streak }) {
+  const items = [
+    { label: 'Today', value: todayResult ? `${todayResult.score}/${todayResult.total}` : '—', sub: todayResult ? `${Math.round(todayResult.score/todayResult.total*100)}%` : null },
+    { label: 'Yesterday', value: yesterday ? `${yesterday.score}/${yesterday.total}` : '—', sub: yesterday ? `${Math.round(yesterday.score/yesterday.total*100)}%` : null },
+    { label: 'Streak', value: `${streak}d 🔥`, accent: true },
+  ]
   return (
-    <div className="flex items-center justify-between py-2.5 border-b border-[rgba(91,84,232,0.08)] last:border-0">
-      <span className="text-sm text-ink">{label}</span>
-      <span className={`text-xs font-mono ${accent ? 'text-accent font-semibold' : 'text-ink-3'}`}>{value}</span>
+    <div className="card py-2.5">
+      <div className="grid grid-cols-3 divide-x divide-[rgba(91,84,232,0.08)]">
+        {items.map(({ label, value, sub, accent }) => (
+          <div key={label} className="flex flex-col items-center gap-0.5 px-2">
+            <span className="text-[9px] text-ink-3 font-mono uppercase tracking-wide">{label}</span>
+            <span className={`text-sm font-bold font-mono ${accent ? 'text-accent' : 'text-ink'}`}>{value}</span>
+            {sub && <span className="text-[9px] text-ink-3 font-mono">{sub}</span>}
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

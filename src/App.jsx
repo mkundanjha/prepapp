@@ -5,7 +5,11 @@ import Session   from './components/Session'
 import Roadmap   from './components/Roadmap'
 import Reminders from './components/Reminders'
 import Settings  from './components/Settings'
+import Auth      from './components/Auth'
+import Avatar    from './components/Avatar'
 import { useStore } from './store/useStore'
+import { supabase } from './lib/supabase'
+import { loadQuizHistory, loadQuizLevel, upsertProfile } from './lib/db'
 
 const TABS = [
   { id: 'quiz',      label: 'Quiz',      icon: '⚡' },
@@ -13,17 +17,33 @@ const TABS = [
   { id: 'session',   label: 'Session',   icon: '▶' },
   { id: 'roadmap',   label: 'Roadmap',   icon: '⬡' },
   { id: 'reminders', label: 'Reminders', icon: '◎' },
-  { id: 'settings',  label: 'Settings',  icon: '◌' },
 ]
 
 const CONTENT = { quiz: Quiz, today: Today, session: Session, roadmap: Roadmap, reminders: Reminders, settings: Settings }
 
 export default function App() {
   const [active, setActive] = useState('today')
-  const { pauseActive, resumeNow, targetDate, themeMode } = useStore()
+  const [session, setSession] = useState(undefined)
+  const [showSignOut, setShowSignOut] = useState(false)
+  const { pauseActive, resumeNow, targetDate, themeMode, setQuizHistory, setQuizLevel } = useStore()
   const daysLeft = Math.max(0, Math.round((new Date(targetDate) - new Date()) / 86400000))
 
   const Content = CONTENT[active]
+  const user = session?.user
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
+    return () => subscription.unsubscribe()
+  }, [])
+
+  useEffect(() => {
+    if (!session?.user) return
+    const { id, user_metadata } = session.user
+    loadQuizHistory(id).then(h => setQuizHistory(h))
+    loadQuizLevel(id).then(l => setQuizLevel(l))
+    upsertProfile(id, user_metadata?.full_name || user_metadata?.name, user_metadata?.avatar_url)
+  }, [session?.user?.id])
 
   useEffect(() => {
     const root = document.documentElement
@@ -35,6 +55,9 @@ export default function App() {
 
     root.dataset.theme = themeMode
   }, [themeMode])
+
+  if (session === undefined) return null
+  if (!session) return <Auth />
 
   return (
     <div className="flex flex-col h-full bg-surface-2 text-ink">
@@ -56,6 +79,32 @@ export default function App() {
             </button>
           )}
           <span className="text-[11px] font-mono text-ink-3">{daysLeft}d left</span>
+          {user && (
+            <div className="relative">
+              <button onClick={() => setShowSignOut(s => !s)}>
+                <Avatar src={user.user_metadata?.avatar_url} name={user.user_metadata?.full_name || user.email} size="sm" />
+              </button>
+              {showSignOut && (
+                <div className="absolute right-0 top-9 bg-surface border border-[var(--border-soft-color)] rounded-xl shadow-lg overflow-hidden z-50 min-w-[160px]">
+                  <div className="px-3 py-2 text-[11px] text-ink-3 font-mono border-b border-[var(--border-soft-color)] truncate">
+                    {user.email}
+                  </div>
+                  <button
+                    onClick={() => { setActive('settings'); setShowSignOut(false) }}
+                    className="w-full text-left px-3 py-2.5 text-sm text-ink-2 hover:bg-surface-3 transition-colors"
+                  >
+                    Settings
+                  </button>
+                  <button
+                    onClick={() => { supabase.auth.signOut(); setShowSignOut(false) }}
+                    className="w-full text-left px-3 py-2.5 text-sm text-red-600 hover:bg-surface-3 transition-colors border-t border-[var(--border-soft-color)]"
+                  >
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
